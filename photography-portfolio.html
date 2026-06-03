@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LENS — معرض الصور</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Tajawal:wght@300;400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, query, orderBy, where }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBTvE8lGzBQzZzWqkIPTudAzOT9UdV07LM",
+    authDomain: "anwar-2a290.firebaseapp.com",
+    projectId: "anwar-2a290",
+    storageBucket: "anwar-2a290.firebasestorage.app",
+    messagingSenderId: "434479657996",
+    appId: "1:434479657996:web:905048298abd3c63ce6a29"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+  const provider = new GoogleAuthProvider();
+
+  // Expose to window
+  window._fb = { auth, db, storage, provider, signInWithPopup, signOut,
+    onAuthStateChanged, collection, addDoc, getDocs, query, orderBy, where,
+    ref, uploadBytes, getDownloadURL };
+
+  // Watch auth state
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      window.currentUser = user;
+      showApp(user);
+    } else {
+      window.currentUser = null;
+      showAuth();
+    }
+  });
+</script>
+
+<style>
+:root {
+  --bg: #050a0e; --bg2: #0a1520; --accent: #00e5c8; --accent2: #00b8ff;
+  --text: #e8f4f8; --muted: #6a8a99; --card: #0d1f2d;
+  --border: rgba(0,229,200,0.15); --glass: rgba(10,21,32,0.88);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Tajawal',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; }
+
+/* AUTH */
+#auth-screen {
+  position:fixed; inset:0; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; z-index:1000;
+}
+#auth-screen::before {
+  content:''; position:absolute; inset:0;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,180,200,0.12) 0%, transparent 70%);
+}
+.auth-bg-text {
+  position:absolute; font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(80px,20vw,280px); color:rgba(0,229,200,0.03);
+  user-select:none; top:50%; left:50%; transform:translate(-50%,-50%);
+}
+.auth-box {
+  position:relative; background:var(--glass); border:1px solid var(--border);
+  backdrop-filter:blur(24px); border-radius:4px; padding:56px 48px;
+  width:100%; max-width:420px; text-align:center;
+  animation:fadeUp 0.8s ease both;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+.auth-logo { font-family:'Bebas Neue',sans-serif; font-size:52px; letter-spacing:0.2em; color:var(--accent); margin-bottom:6px; }
+.auth-tagline { color:var(--muted); font-size:12px; letter-spacing:0.2em; text-transform:uppercase; margin-bottom:48px; }
+.auth-tab-row { display:flex; margin-bottom:28px; border:1px solid var(--border); border-radius:3px; overflow:hidden; }
+.auth-tab { flex:1; padding:12px; background:transparent; color:var(--muted); border:none; font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer; transition:all 0.3s; }
+.auth-tab.active { background:var(--accent); color:var(--bg); font-weight:700; }
+.auth-form { display:flex; flex-direction:column; gap:12px; }
+.auth-input { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:3px; padding:14px 16px; color:var(--text); font-family:'Tajawal',sans-serif; font-size:15px; outline:none; transition:border 0.3s; text-align:right; }
+.auth-input:focus { border-color:var(--accent); }
+.auth-input::placeholder { color:var(--muted); }
+.btn-primary { background:var(--accent); color:var(--bg); border:none; padding:15px; border-radius:3px; font-family:'Tajawal',sans-serif; font-size:16px; font-weight:700; cursor:pointer; letter-spacing:0.05em; transition:all 0.3s; margin-top:4px; width:100%; }
+.btn-primary:hover { background:var(--accent2); transform:translateY(-1px); box-shadow:0 8px 32px rgba(0,229,200,0.3); }
+.btn-primary:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+.auth-divider { display:flex; align-items:center; gap:12px; color:var(--muted); font-size:12px; margin:12px 0; }
+.auth-divider::before,.auth-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+.btn-google { background:transparent; border:1px solid var(--border); color:var(--text); padding:13px; border-radius:3px; font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:all 0.3s; width:100%; }
+.btn-google:hover { border-color:var(--accent); background:rgba(0,229,200,0.05); }
+.google-icon { width:20px; height:20px; flex-shrink:0; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234285F4' d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'/%3E%3Cpath fill='%2334A853' d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'/%3E%3Cpath fill='%23FBBC05' d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'/%3E%3Cpath fill='%23EA4335' d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'/%3E%3C/svg%3E") center/contain no-repeat; }
+.auth-error { color:#ff6b6b; font-size:13px; margin-top:4px; display:none; }
+
+/* APP */
+#app { display:none; }
+nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 60px; height:64px; display:flex; align-items:center; justify-content:space-between; background:rgba(5,10,14,0.92); backdrop-filter:blur(20px); border-bottom:1px solid rgba(0,229,200,0.08); }
+.nav-logo { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:0.2em; color:var(--accent); }
+.nav-links { display:flex; gap:36px; list-style:none; }
+.nav-links a { color:var(--muted); text-decoration:none; font-size:12px; letter-spacing:0.15em; text-transform:uppercase; transition:color 0.3s; cursor:pointer; }
+.nav-links a:hover { color:var(--accent); }
+.nav-right { display:flex; align-items:center; gap:14px; }
+.btn-upload-nav { background:var(--accent); color:var(--bg); border:none; padding:9px 20px; font-family:'Tajawal',sans-serif; font-size:13px; font-weight:700; cursor:pointer; border-radius:2px; transition:all 0.3s; }
+.btn-upload-nav:hover { background:var(--accent2); }
+.user-menu { position:relative; }
+.user-avatar { width:36px; height:36px; border-radius:50%; background:var(--accent); color:var(--bg); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; cursor:pointer; overflow:hidden; }
+.user-avatar img { width:100%; height:100%; object-fit:cover; }
+.user-dropdown { position:absolute; top:44px; left:0; background:var(--card); border:1px solid var(--border); border-radius:3px; min-width:160px; overflow:hidden; display:none; z-index:200; }
+.user-menu:hover .user-dropdown { display:block; }
+.user-dropdown a { display:block; padding:12px 16px; color:var(--text); text-decoration:none; font-size:13px; transition:background 0.2s; cursor:pointer; }
+.user-dropdown a:hover { background:rgba(0,229,200,0.08); color:var(--accent); }
+
+/* HERO */
+.hero { height:100vh; position:relative; display:flex; align-items:center; overflow:hidden; }
+.hero-bg { position:absolute; inset:0; background: linear-gradient(135deg, rgba(0,10,20,0.93) 0%, rgba(0,30,50,0.5) 50%, rgba(0,10,20,0.87) 100%), url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=80') center/cover no-repeat; }
+.hero-content { position:relative; padding:0 80px; max-width:700px; animation:fadeUp 1s ease 0.3s both; }
+.hero-eyebrow { font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--accent); margin-bottom:20px; }
+.hero-title { font-family:'Playfair Display',serif; font-size:clamp(48px,7vw,96px); font-weight:900; line-height:0.95; color:#fff; margin-bottom:28px; }
+.hero-title span { color:var(--accent); }
+.hero-desc { font-size:15px; color:rgba(255,255,255,0.58); line-height:1.8; max-width:460px; margin-bottom:40px; }
+.hero-btns { display:flex; gap:14px; flex-wrap:wrap; }
+.btn-outline { background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.3); padding:14px 28px; font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer; border-radius:2px; transition:all 0.3s; }
+.btn-outline:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ALBUMS */
+.section-title-wrap { text-align:center; padding:90px 60px 56px; }
+.section-eyebrow { font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--accent); margin-bottom:14px; }
+.section-title { font-family:'Playfair Display',serif; font-size:clamp(30px,5vw,52px); font-weight:700; color:#fff; margin-bottom:14px; }
+.section-sub { color:var(--muted); font-size:14px; max-width:480px; margin:0 auto; line-height:1.7; }
+.albums-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:3px; padding:0 60px 90px; }
+.album-card { position:relative; aspect-ratio:3/4; overflow:hidden; cursor:pointer; background:var(--card); }
+.album-card img { width:100%; height:100%; object-fit:cover; transition:transform 0.6s ease; filter:brightness(0.72); }
+.album-card:hover img { transform:scale(1.08); filter:brightness(0.45); }
+.album-overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,0.8) 0%,transparent 60%); }
+.album-info { position:absolute; bottom:0; left:0; right:0; padding:22px; transform:translateY(8px); transition:transform 0.4s; }
+.album-card:hover .album-info { transform:translateY(0); }
+.album-name { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.1em; color:#fff; margin-bottom:5px; }
+.album-count { font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; }
+.album-add-btn { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; border:2px dashed var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all 0.3s; font-family:'Tajawal',sans-serif; font-size:14px; }
+.album-add-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(0,229,200,0.04); }
+.plus-icon { width:48px; height:48px; border:2px solid currentColor; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; transition:transform 0.3s; }
+.album-add-btn:hover .plus-icon { transform:rotate(90deg); }
+.albums-loading { text-align:center; padding:40px; color:var(--muted); grid-column:1/-1; }
+
+/* DISCOVER */
+.discover-section { position:relative; min-height:80vh; display:flex; align-items:center; overflow:hidden; padding:100px 80px; }
+.discover-bg { position:absolute; inset:0; background: linear-gradient(to right, rgba(5,10,14,0.97) 40%, rgba(5,10,14,0.4) 100%), url('https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1600&q=80') center/cover; }
+.discover-content { position:relative; max-width:500px; }
+.discover-title { font-family:'Playfair Display',serif; font-size:clamp(40px,6vw,78px); font-weight:900; line-height:1; margin-bottom:26px; }
+.discover-title em { color:var(--accent); font-style:normal; }
+.discover-desc { color:rgba(255,255,255,0.5); font-size:15px; line-height:1.9; margin-bottom:38px; font-style:italic; border-right:2px solid var(--accent); padding-right:16px; }
+.play-btn { display:inline-flex; align-items:center; gap:14px; background:transparent; border:none; color:var(--text); cursor:pointer; font-family:'Tajawal',sans-serif; font-size:13px; letter-spacing:0.1em; text-transform:uppercase; transition:color 0.3s; }
+.play-btn:hover { color:var(--accent); }
+.play-circle { width:52px; height:52px; border:1px solid var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; transition:background 0.3s; }
+.play-btn:hover .play-circle { background:rgba(0,229,200,0.1); }
+.disc-thumb { position:absolute; overflow:hidden; border:1px solid var(--border); }
+.disc-thumb img { width:100%; height:100%; object-fit:cover; opacity:0.65; }
+.disc-thumb:nth-child(1){top:10%;right:4%;width:175px;height:108px;}
+.disc-thumb:nth-child(2){top:10%;right:calc(4% + 181px);width:135px;height:108px;}
+.disc-thumb:nth-child(3){bottom:10%;right:4%;width:155px;height:98px;}
+.disc-thumb:nth-child(4){bottom:10%;right:calc(4% + 161px);width:145px;height:98px;}
+
+/* FOOTER */
+footer { border-top:1px solid var(--border); padding:44px 60px; display:flex; align-items:center; justify-content:space-between; background:var(--bg2); }
+.footer-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.2em; color:var(--accent); }
+.footer-social { display:flex; gap:16px; }
+.social-link { width:34px; height:34px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--muted); text-decoration:none; font-size:12px; transition:all 0.3s; border-radius:50%; }
+.social-link:hover { border-color:var(--accent); color:var(--accent); }
+.footer-copy { color:var(--muted); font-size:12px; }
+
+/* UPLOAD MODAL */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(12px); z-index:500; display:none; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--card); border:1px solid var(--border); border-radius:4px; padding:44px; width:100%; max-width:520px; position:relative; animation:fadeUp 0.4s ease both; max-height:90vh; overflow-y:auto; }
+.modal-close { position:absolute; top:18px; left:18px; background:none; border:none; color:var(--muted); font-size:20px; cursor:pointer; transition:color 0.3s; }
+.modal-close:hover { color:var(--accent); }
+.modal-title { font-family:'Playfair Display',serif; font-size:26px; color:#fff; margin-bottom:6px; }
+.modal-sub { color:var(--muted); font-size:13px; margin-bottom:28px; }
+.drop-zone { border:2px dashed var(--border); border-radius:4px; padding:50px 32px; text-align:center; cursor:pointer; transition:all 0.3s; margin-bottom:20px; position:relative; }
+.drop-zone:hover,.drop-zone.dragging { border-color:var(--accent); background:rgba(0,229,200,0.04); }
+.drop-zone input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; }
+.drop-icon { font-size:38px; margin-bottom:10px; }
+.drop-text { color:var(--muted); font-size:13px; line-height:1.7; }
+.drop-text strong { color:var(--accent); }
+.modal-input { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:3px; padding:12px 14px; color:var(--text); font-family:'Tajawal',sans-serif; font-size:14px; width:100%; outline:none; margin-bottom:12px; text-align:right; transition:border 0.3s; }
+.modal-input:focus { border-color:var(--accent); }
+.modal-input::placeholder { color:var(--muted); }
+.preview-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:16px; }
+.preview-thumb { aspect-ratio:1; border-radius:2px; overflow:hidden; background:var(--bg); }
+.preview-thumb img { width:100%; height:100%; object-fit:cover; }
+.upload-progress { background:rgba(255,255,255,0.05); border-radius:2px; height:4px; margin-bottom:16px; overflow:hidden; display:none; }
+.upload-progress-bar { height:100%; background:var(--accent); width:0%; transition:width 0.3s; border-radius:2px; }
+
+/* TOAST */
+.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--accent); color:var(--bg); padding:13px 26px; border-radius:3px; font-family:'Tajawal',sans-serif; font-weight:700; font-size:14px; z-index:9999; transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1); white-space:nowrap; }
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.error { background:#ff6b6b; color:#fff; }
+
+::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:var(--bg)} ::-webkit-scrollbar-thumb{background:var(--accent);border-radius:4px}
+
+@media(max-width:768px){
+  nav{padding:0 20px} .nav-links{display:none}
+  .hero-content{padding:0 24px} .albums-grid{padding:0 16px 60px;grid-template-columns:repeat(2,1fr)}
+  .discover-section{padding:60px 24px} .disc-thumb{display:none}
+  footer{flex-direction:column;gap:16px;text-align:center;padding:32px 24px}
+  .modal{padding:28px 20px;margin:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-bg-text">LENS</div>
+  <div class="auth-box">
+    <div class="auth-logo">LENS</div>
+    <div class="auth-tagline">معرضك الفوتوغرافي الخاص</div>
+
+    <div class="auth-tab-row">
+      <button class="auth-tab active" onclick="switchTab('login')">تسجيل الدخول</button>
+      <button class="auth-tab" onclick="switchTab('register')">حساب جديد</button>
+    </div>
+
+    <div id="login-form" class="auth-form">
+      <input class="auth-input" type="email" placeholder="البريد الإلكتروني" id="email-in">
+      <input class="auth-input" type="password" placeholder="كلمة المرور" id="pass-in">
+      <div class="auth-error" id="login-error"></div>
+      <button class="btn-primary" id="login-btn" onclick="loginEmail()">دخول ←</button>
+    </div>
+
+    <div id="register-form" class="auth-form" style="display:none">
+      <input class="auth-input" type="text" placeholder="اسمك الكامل" id="name-in">
+      <input class="auth-input" type="email" placeholder="البريد الإلكتروني" id="email-reg">
+      <input class="auth-input" type="password" placeholder="كلمة المرور (6 أحرف+)" id="pass-reg">
+      <div class="auth-error" id="register-error"></div>
+      <button class="btn-primary" id="register-btn" onclick="registerEmail()">إنشاء الحساب ←</button>
+    </div>
+
+    <div class="auth-divider">أو</div>
+    <button class="btn-google" onclick="loginGoogle()">
+      <div class="google-icon"></div>
+      المتابعة عبر Google
+    </button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <nav>
+    <div class="nav-logo">LENS</div>
+    <ul class="nav-links">
+      <li><a onclick="scrollTo({top:0,behavior:'smooth'})">الرئيسية</a></li>
+      <li><a onclick="document.getElementById('albums').scrollIntoView({behavior:'smooth'})">المعرض</a></li>
+      <li><a onclick="document.getElementById('discover').scrollIntoView({behavior:'smooth'})">اكتشف</a></li>
+      <li><a onclick="openUpload()">رفع صور</a></li>
+    </ul>
+    <div class="nav-right">
+      <button class="btn-upload-nav" onclick="openUpload()">+ رفع صورة</button>
+      <div class="user-menu">
+        <div class="user-avatar" id="user-avatar">م</div>
+        <div class="user-dropdown">
+          <a id="user-name-dd">حسابي</a>
+          <a onclick="doSignOut()">تسجيل الخروج</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">معرضك الفوتوغرافي</div>
+      <h1 class="hero-title">اللحظات<br><span>تبقى</span><br>للأبد</h1>
+      <p class="hero-desc">هذا مكانك لحفظ لحظاتك الجميلة ومشاركتها. كل صورة تحكي قصة، وكل ألبوم رحلة.</p>
+      <div class="hero-btns">
+        <button class="btn-primary" style="width:auto;padding:14px 32px" onclick="openUpload()">ابدأ الرفع ←</button>
+        <button class="btn-outline" onclick="document.getElementById('albums').scrollIntoView({behavior:'smooth'})">استعرض المعرض</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="albums">
+    <div class="section-title-wrap">
+      <div class="section-eyebrow">معرضي الفوتوغرافي</div>
+      <h2 class="section-title">الألبومات</h2>
+      <p class="section-sub">كل ألبوم هو رحلة ذكريات. ابدأ بإنشاء أول ألبوماتك الآن.</p>
+    </div>
+    <div class="albums-grid" id="albums-grid">
+      <div class="albums-loading">جاري التحميل...</div>
+    </div>
+  </section>
+
+  <section class="discover-section" id="discover">
+    <div class="discover-bg"></div>
+    <div class="discover-content">
+      <div class="section-eyebrow">اكتشف العالم</div>
+      <h2 class="discover-title">اكتشف<br><em>طريقة</em><br>جديدة</h2>
+      <p class="discover-desc">"هل سبق لك أن سمعت صوت الانهيار الجليدي؟ بعد توقفه تتوقف تماماً — هذا هو الصمت المطلق."</p>
+      <button class="play-btn" onclick="openUpload()">
+        <div class="play-circle">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 3l10 5-10 5V3z"/></svg>
+        </div>
+        ابدأ بتوثيق رحلتك
+      </button>
+    </div>
+    <div style="position:absolute;inset:0;pointer-events:none">
+      <div class="disc-thumb"><img src="https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=400&q=70" alt=""></div>
+      <div class="disc-thumb"><img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=70" alt=""></div>
+      <div class="disc-thumb"><img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&q=70" alt=""></div>
+      <div class="disc-thumb"><img src="https://images.unsplash.com/photo-1434725039720-aaad6dd32dfe?w=400&q=70" alt=""></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-logo">LENS</div>
+    <div class="footer-social">
+      <a href="#" class="social-link">IG</a>
+      <a href="#" class="social-link">FB</a>
+      <a href="#" class="social-link">TW</a>
+    </div>
+    <div class="footer-copy">© 2026 LENS</div>
+  </footer>
+</div>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="upload-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeUpload()">✕</button>
+    <div class="modal-title">رفع صور جديدة</div>
+    <div class="modal-sub">اسحب صورك هنا أو اضغط للاختيار</div>
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" multiple accept="image/*" onchange="handleFiles(this.files)">
+      <div class="drop-icon">🖼</div>
+      <div class="drop-text"><strong>اضغط لاختيار الصور</strong><br>أو اسحبها هنا<br><small style="font-size:11px">JPG, PNG, WEBP — حتى 10MB للصورة</small></div>
+    </div>
+    <div class="preview-grid" id="preview-grid"></div>
+    <div class="upload-progress" id="upload-progress"><div class="upload-progress-bar" id="progress-bar"></div></div>
+    <input class="modal-input" type="text" placeholder="اسم الألبوم (مثل: رحلة باريس)" id="album-name">
+    <input class="modal-input" type="text" placeholder="وصف الصور (اختياري)" id="photo-desc">
+    <button class="btn-primary" id="upload-btn" onclick="doUpload()">رفع الصور ←</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ---- Firebase imports already done above via window._fb ----
+// Wait for Firebase to init
+async function waitFB() {
+  return new Promise(res => {
+    const t = setInterval(() => { if(window._fb){clearInterval(t);res();} },50);
+  });
+}
+
+// ---- AUTH ----
+window.switchTab = function(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('login-form').style.display = tab==='login'?'flex':'none';
+  document.getElementById('register-form').style.display = tab==='register'?'flex':'none';
+};
+
+window.loginGoogle = async function() {
+  await waitFB();
+  const {auth, provider, signInWithPopup} = window._fb;
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    showToast('خطأ في تسجيل الدخول بـ Google: ' + e.message, true);
+  }
+};
+
+window.loginEmail = async function() {
+  await waitFB();
+  const email = document.getElementById('email-in').value.trim();
+  const pass = document.getElementById('pass-in').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  if (!email||!pass) { errEl.textContent='يرجى إدخال البريد وكلمة المرور'; errEl.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='جاري الدخول...';
+  errEl.style.display='none';
+  try {
+    const {auth} = window._fb;
+    const {signInWithEmailAndPassword} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    const msgs = {'auth/user-not-found':'البريد غير موجود','auth/wrong-password':'كلمة المرور خاطئة','auth/invalid-credential':'البريد أو كلمة المرور خاطئة'};
+    errEl.textContent = msgs[e.code] || 'خطأ: ' + e.message;
+    errEl.style.display='block';
+    btn.disabled=false; btn.textContent='دخول ←';
+  }
+};
+
+window.registerEmail = async function() {
+  await waitFB();
+  const name = document.getElementById('name-in').value.trim();
+  const email = document.getElementById('email-reg').value.trim();
+  const pass = document.getElementById('pass-reg').value;
+  const errEl = document.getElementById('register-error');
+  const btn = document.getElementById('register-btn');
+  if (!name||!email||!pass) { errEl.textContent='يرجى ملء جميع الحقول'; errEl.style.display='block'; return; }
+  if (pass.length<6) { errEl.textContent='كلمة المرور يجب أن تكون 6 أحرف على الأقل'; errEl.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='جاري الإنشاء...';
+  errEl.style.display='none';
+  try {
+    const {auth} = window._fb;
+    const {createUserWithEmailAndPassword, updateProfile} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(cred.user, {displayName: name});
+  } catch(e) {
+    const msgs = {'auth/email-already-in-use':'هذا البريد مستخدم بالفعل','auth/weak-password':'كلمة المرور ضعيفة جداً'};
+    errEl.textContent = msgs[e.code] || 'خطأ: ' + e.message;
+    errEl.style.display='block';
+    btn.disabled=false; btn.textContent='إنشاء الحساب ←';
+  }
+};
+
+window.doSignOut = async function() {
+  await waitFB();
+  const {auth, signOut} = window._fb;
+  await signOut(auth);
+};
+
+// ---- SHOW/HIDE ----
+window.showApp = function(user) {
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  const av = document.getElementById('user-avatar');
+  if (user.photoURL) {
+    av.innerHTML = `<img src="${user.photoURL}" alt="">`;
+  } else {
+    const n = user.displayName || user.email || 'م';
+    av.textContent = n[0].toUpperCase();
+  }
+  const ddName = document.getElementById('user-name-dd');
+  ddName.textContent = user.displayName || user.email;
+  loadAlbums();
+  showToast('مرحباً ' + (user.displayName || '') + ' 👋');
+};
+
+window.showAuth = function() {
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+};
+
+// ---- ALBUMS ----
+window.loadAlbums = async function() {
+  await waitFB();
+  const {db, collection, getDocs, query, orderBy, where} = window._fb;
+  const grid = document.getElementById('albums-grid');
+  grid.innerHTML = '<div class="albums-loading">جاري تحميل ألبوماتك...</div>';
+  try {
+    const uid = window.currentUser.uid;
+    const q = query(collection(db,'albums'), where('uid','==',uid), orderBy('createdAt','desc'));
+    const snap = await getDocs(q);
+    renderAlbums(snap.docs.map(d => ({id:d.id,...d.data()})));
+  } catch(e) {
+    grid.innerHTML = '<div class="albums-loading">تعذر تحميل الألبومات</div>';
+  }
+};
+
+function renderAlbums(albums) {
+  const grid = document.getElementById('albums-grid');
+  grid.innerHTML = '';
+  albums.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'album-card';
+    card.innerHTML = `
+      <img src="${a.cover}" alt="${a.name}" loading="lazy">
+      <div class="album-overlay"></div>
+      <div class="album-info">
+        <div class="album-name">${a.name}</div>
+        <div class="album-count">${a.photos} صورة</div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  const add = document.createElement('div');
+  add.className='album-card'; add.style.aspectRatio='3/4';
+  add.innerHTML=`<button class="album-add-btn" onclick="openUpload()"><div class="plus-icon">+</div>إضافة ألبوم جديد</button>`;
+  grid.appendChild(add);
+}
+
+// ---- UPLOAD ----
+let pendingFiles = [];
+
+window.openUpload = function() {
+  document.getElementById('upload-modal').classList.add('open');
+  pendingFiles=[];
+  document.getElementById('preview-grid').innerHTML='';
+  document.getElementById('album-name').value='';
+  document.getElementById('photo-desc').value='';
+  document.getElementById('upload-progress').style.display='none';
+  document.getElementById('progress-bar').style.width='0%';
+  document.getElementById('upload-btn').disabled=false;
+  document.getElementById('upload-btn').textContent='رفع الصور ←';
+};
+
+window.closeUpload = function() {
+  document.getElementById('upload-modal').classList.remove('open');
+};
+
+document.getElementById('upload-modal').addEventListener('click',function(e){if(e.target===this)closeUpload();});
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragging');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragging'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragging');handleFiles(e.dataTransfer.files);});
+
+window.handleFiles = function(files) {
+  Array.from(files).forEach(file => {
+    pendingFiles.push(file);
+    const reader = new FileReader();
+    reader.onload = e => {
+      const d = document.createElement('div');
+      d.className='preview-thumb';
+      d.innerHTML=`<img src="${e.target.result}" alt="">`;
+      document.getElementById('preview-grid').appendChild(d);
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+window.doUpload = async function() {
+  if (!pendingFiles.length) { showToast('لم تختر أي صور!', true); return; }
+  await waitFB();
+  const {db, storage, collection, addDoc, ref, uploadBytes, getDownloadURL} = window._fb;
+  const albumName = document.getElementById('album-name').value.trim() || 'ألبوم ' + new Date().toLocaleDateString('ar');
+  const btn = document.getElementById('upload-btn');
+  const prog = document.getElementById('upload-progress');
+  const bar = document.getElementById('progress-bar');
+  btn.disabled=true; btn.textContent='جاري الرفع...';
+  prog.style.display='block';
+  try {
+    const uid = window.currentUser.uid;
+    let coverURL = '';
+    for (let i=0; i<pendingFiles.length; i++) {
+      const file = pendingFiles[i];
+      const storageRef = ref(storage, `photos/${uid}/${Date.now()}_${file.name}`);
+      const snap = await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(snap.ref);
+      if (i===0) coverURL = url;
+      bar.style.width = ((i+1)/pendingFiles.length*80) + '%';
+    }
+    await addDoc(collection(db,'albums'), {
+      uid, name: albumName, cover: coverURL,
+      photos: pendingFiles.length,
+      createdAt: new Date()
+    });
+    bar.style.width='100%';
+    setTimeout(()=>{
+      closeUpload();
+      loadAlbums();
+      showToast('تم رفع ' + pendingFiles.length + ' صورة بنجاح ✓');
+      pendingFiles=[];
+    }, 400);
+  } catch(e) {
+    showToast('خطأ في الرفع: ' + e.message, true);
+    btn.disabled=false; btn.textContent='رفع الصور ←';
+  }
+};
+
+// ---- TOAST ----
+window.showToast = function(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast' + (isError?' error':'');
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3200);
+};
+</script>
+</body>
+</html>
