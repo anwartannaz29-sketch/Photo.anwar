@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ألبومات - قراءة وكتابة للمالك فقط
+    match /albums/{albumId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null;
+      
+      // صور الألبوم
+      match /photos/{photoId} {
+        allow read: if request.auth != null && get(/databases/$(database)/documents/albums/$(albumId)).data.uid == request.auth.uid;
+        allow write: if request.auth != null && get(/databases/$(database)/documents/albums/$(albumId)).data.uid == request.auth.uid;
+        
+        // تعليقات الصور
+        match /comments/{commentId} {
+          allow read, write: if request.auth != null;
+        }
+      }
+    }
+  }
+}
