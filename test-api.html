@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اختبار API - LENS</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+    .header p { opacity: 0.9; }
+    .content {
+      padding: 30px;
+    }
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-right: 4px solid #667eea;
+    }
+    .section h2 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+    }
+    .test-group {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.3s;
+      font-family: 'Tajawal', sans-serif;
+    }
+    button:hover {
+      background: #764ba2;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    button.danger {
+      background: #e74c3c;
+    }
+    button.danger:hover {
+      background: #c0392b;
+    }
+    .output {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #333;
+    }
+    .output.error {
+      background: #ffe6e6;
+      border-color: #e74c3c;
+      color: #c0392b;
+    }
+    .output.success {
+      background: #e6f7ff;
+      border-color: #3498db;
+      color: #2980b9;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .status.logged-in {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status.logged-out {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .input-group input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: 'Tajawal', sans-serif;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .header h1 { font-size: 1.8em; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🧪 اختبار API - LENS</h1>
+    <p>اختبر جميع نقاط الـ API من هنا</p>
+  </div>
+
+  <div class="content">
+    <!-- حالة المستخدم -->
+    <div class="status logged-out" id="status">
+      ❌ لم تقم بتسجيل الدخول
+    </div>
+
+    <!-- المصادقة -->
+    <div class="section">
+      <h2>🔐 المصادقة</h2>
+      <div class="test-group">
+        <button onclick="testLogin()">تسجيل الدخول بـ Google</button>
+        <button onclick="testLogout()" class="danger">تسجيل الخروج</button>
+      </div>
+      <div class="output" id="authOutput"></div>
+    </div>
+
+    <!-- الألبومات -->
+    <div class="section">
+      <h2>📸 الألبومات</h2>
+      <div class="test-group">
+        <button onclick="testGetAlbums()">جلب الألبومات</button>
+        <div class="input-group">
+          <input type="text" id="albumName" placeholder="اسم الألبوم">
+          <button onclick="testCreateAlbum()">إنشاء ألبوم</button>
+        </div>
+      </div>
+      <div class="output" id="albumsOutput"></div>
+    </div>
+
+    <!-- الصور -->
+    <div class="section">
+      <h2>🖼️ الصور</h2>
+      <div class="test-group">
+        <div class="input-group">
+          <input type="text" id="albumId" placeholder="معرف الألبوم">
+          <button onclick="testGetPhotos()">جلب الصور</button>
+        </div>
+        <div class="input-group">
+          <input type="text" id="photoUrl" placeholder="رابط الصورة">
+          <input type="text" id="photoName" placeholder="اسم الصورة">
+          <button onclick="testAddPhoto()">إضافة صورة</button>
+        </div>
+      </div>
+      <div class="output" id="photosOutput"></div>
+    </div>
+
+    <!-- المستخدم -->
+    <div class="section">
+      <h2>👤 المستخدم</h2>
+      <div class="test-group">
+        <button onclick="testGetProfile()">البيانات الشخصية</button>
+        <button onclick="testGetStats()">الإحصائيات</button>
+      </div>
+      <div class="output" id="userOutput"></div>
+    </div>
+
+    <!-- الأدوات المساعدة -->
+    <div class="section">
+      <h2>🛠️ الأدوات</h2>
+      <div class="test-group">
+        <button onclick="clearAllOutputs()">مسح جميع الرسائل</button>
+        <button onclick="copyToClipboard()">نسخ آخر نتيجة</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js"></script>
+
+<script>
+// تهيئة Firebase - استبدل بمفاتيحك
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY_HERE",
+  authDomain: "YOUR_AUTH_DOMAIN_HERE",
+  projectId: "YOUR_PROJECT_ID_HERE",
+  storageBucket: "YOUR_STORAGE_BUCKET_HERE",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
+  appId: "YOUR_APP_ID_HERE"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
+
+// متغيرات عامة
+let lastOutput = '';
+let apiBaseUrl = 'https://europe-west1-anwar-2a290.cloudfunctions.net/api';
+
+// مراقبة حالة المستخدم
+auth.onAuthStateChanged(user => {
+  const statusEl = document.getElementById('status');
+  if (user) {
+    statusEl.className = 'status logged-in';
+    statusEl.textContent = `✅ مرحباً ${user.displayName || user.email}`;
+  } else {
+    statusEl.className = 'status logged-out';
+    statusEl.textContent = '❌ لم تقم بتسجيل الدخول';
+  }
+});
+
+// دالة مساعدة لعرض النتائج
+function showOutput(elementId, data, isError = false) {
+  const el = document.getElementById(elementId);
+  lastOutput = JSON.stringify(data, null, 2);
+  el.textContent = lastOutput;
+  el.className = 'output' + (isError ? ' error' : ' success');
+}
+
+// 🔐 المصادقة
+async function testLogin() {
+  try {
+    showOutput('authOutput', { message: 'جاري تسجيل الدخول...' });
+    await auth.signInWithPopup(provider);
+    showOutput('authOutput', { message: 'تم تسجيل الدخول بنجاح ✓' });
+  } catch (error) {
+    showOutput('authOutput', { error: error.message }, true);
+  }
+}
+
+async function testLogout() {
+  try {
+    await auth.signOut();
+    showOutput('authOutput', { message: 'تم تسجيل الخروج بنجاح ✓' });
+  } catch (error) {
+    showOutput('authOutput', { error: error.message }, true);
+  }
+}
+
+// 📸 الألبومات
+async function testGetAlbums() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return showOutput('albumsOutput', { error: 'يجب تسجيل الدخول أولاً' }, true);
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${apiBaseUrl}/albums`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json();
+    showOutput('albumsOutput', data, !response.ok);
+  } catch (error) {
+    showOutput('albumsOutput', { error: error.message }, true);
+  }
+}
+
+async function testCreateAlbum() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return showOutput('albumsOutput', { error: 'يجب تسجي�� الدخول أولاً' }, true);
+
+    const name = document.getElementById('albumName').value;
+    if (!name) return showOutput('albumsOutput', { error: 'أدخل اسم الألبوم' }, true);
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${apiBaseUrl}/albums`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name, description: 'ألبوم تجريبي' })
+    });
+    const data = await response.json();
+    showOutput('albumsOutput', data, !response.ok);
+    
+    if (response.ok) {
+      document.getElementById('albumName').value = '';
+      document.getElementById('albumId').value = data.data.id;
+    }
+  } catch (error) {
+    showOutput('albumsOutput', { error: error.message }, true);
+  }
+}
+
+// 🖼️ الصور
+async function testGetPhotos() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return showOutput('photosOutput', { error: 'يجب تسجيل الدخول أولاً' }, true);
+
+    const albumId = document.getElementById('albumId').value;
+    if (!albumId) return showOutput('photosOutput', { error: 'أدخل معرف الألبوم' }, true);
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${apiBaseUrl}/albums/${albumId}/photos`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json();
+    showOutput('photosOutput', data, !response.ok);
+  } catch (error) {
+    showOutput('photosOutput', { error: error.message }, true);
+  }
+}
+
+async function testAddPhoto() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return showOutput('photosOutput', { error: 'يجب تسجيل الدخول أولاً' }, true);
+
+    const albumId = document.getElementById('albumId').value;
+    const url = document.getElementById('photoUrl').value;
+    const name = document.getElementById('photoName').value;
+
+    if (!albumId || !url || !name) {
+      return showOutput('photosOutput', { error: 'ملأ جميع الحقول مطلوب' }, true);
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${apiBaseUrl}/albums/${albumId}/photos`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url, name, size: 0 })
+    });
+    const data = await response.json();
+    showOutput('photosOutput', data, !response.ok);
+  } catch (error) {
+    showOutput('photosOutput', { error: error.message }, true);
+  }
+}
+
+// 👤 المستخدم
+async function testGetProfile() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return showOutput('userOutput', { error: 'يجب تسجيل الدخول أولاً' }, true);
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${apiBaseUrl}/user/profile`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json();
+    showOutput('userOutput', data, !response.ok);
+  } catch (error) {
+    showOutput('userOutput', { error: error.message }, true);
+  }
+}
+
+async function testGetStats() {
+  try {
+    const user = auth.currentUser;
+    if (!user) return showOutput('userOutput', { error: 'يجب تسجيل الدخول أولاً' }, true);
+
+    const token = await user.getIdToken();
+    const response = await fetch(`${apiBaseUrl}/user/stats`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json();
+    showOutput('userOutput', data, !response.ok);
+  } catch (error) {
+    showOutput('userOutput', { error: error.message }, true);
+  }
+}
+
+// 🛠️ أدوات
+function clearAllOutputs() {
+  document.querySelectorAll('.output').forEach(el => {
+    el.textContent = '';
+    el.className = 'output';
+  });
+}
+
+function copyToClipboard() {
+  if (lastOutput) {
+    navigator.clipboard.writeText(lastOutput);
+    alert('تم نسخ النتيجة ✓');
+  }
+}
+</script>
+
+</body>
+</html>
