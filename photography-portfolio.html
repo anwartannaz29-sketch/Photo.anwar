@@ -9,43 +9,57 @@
 <!-- Firebase -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged }
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, addDoc, getDocs, query, orderBy, where }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getStorage, ref, uploadBytes, getDownloadURL }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
+  // ⚠️ تحذير: استبدل هذه المفاتيح بمفاتيحك من Firebase Console
+  // الخطوات في القسم "تعليمات الإصلاح" أدناه
   const firebaseConfig = {
-    apiKey: "AIzaSyBTvE8lGzBQzZzWqkIPTudAzOT9UdV07LM",
-    authDomain: "anwar-2a290.firebaseapp.com",
-    projectId: "anwar-2a290",
-    storageBucket: "anwar-2a290.firebasestorage.app",
-    messagingSenderId: "434479657996",
-    appId: "1:434479657996:web:905048298abd3c63ce6a29"
+    apiKey: "YOUR_API_KEY_HERE",
+    authDomain: "YOUR_AUTH_DOMAIN_HERE",
+    projectId: "YOUR_PROJECT_ID_HERE",
+    storageBucket: "YOUR_STORAGE_BUCKET_HERE",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
+    appId: "YOUR_APP_ID_HERE"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  const storage = getStorage(app);
-  const provider = new GoogleAuthProvider();
+  // تحقق من أن المفاتيح موجودة
+  const hasValidConfig = firebaseConfig.apiKey !== "YOUR_API_KEY_HERE";
+  
+  if (!hasValidConfig) {
+    console.error("❌ خطأ: مفاتيح Firebase غير صحيحة. اتبع التعليمات في أسفل الملف.");
+  } else {
+    try {
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      const storage = getStorage(app);
+      const provider = new GoogleAuthProvider();
 
-  // Expose to window
-  window._fb = { auth, db, storage, provider, signInWithPopup, signOut,
-    onAuthStateChanged, collection, addDoc, getDocs, query, orderBy, where,
-    ref, uploadBytes, getDownloadURL };
+      // Expose to window
+      window._fb = { auth, db, storage, provider, signInWithPopup, signOut,
+        onAuthStateChanged, collection, addDoc, getDocs, query, orderBy, where,
+        ref, uploadBytes, getDownloadURL, createUserWithEmailAndPassword, 
+        signInWithEmailAndPassword, updateProfile };
 
-  // Watch auth state
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      window.currentUser = user;
-      showApp(user);
-    } else {
-      window.currentUser = null;
-      showAuth();
+      // Watch auth state
+      onAuthStateChanged(auth, user => {
+        if (user) {
+          window.currentUser = user;
+          showApp(user);
+        } else {
+          window.currentUser = null;
+          showAuth();
+        }
+      });
+    } catch(e) {
+      console.error("❌ خطأ في تهيئة Firebase:", e.message);
     }
-  });
+  }
 </script>
 
 <style>
@@ -84,28 +98,28 @@ body { font-family:'Tajawal',sans-serif; background:var(--bg); color:var(--text)
 .auth-tab { flex:1; padding:12px; background:transparent; color:var(--muted); border:none; font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer; transition:all 0.3s; }
 .auth-tab.active { background:var(--accent); color:var(--bg); font-weight:700; }
 .auth-form { display:flex; flex-direction:column; gap:12px; }
-.auth-input { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:3px; padding:14px 16px; color:var(--text); font-family:'Tajawal',sans-serif; font-size:15px; outline:none; transition:border 0.3s; text-align:right; }
+.auth-input { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:3px; padding:14px 16px; color:var(--text); font-family:'Tajawal',sans-serif; font-size:15px; outline:none; transition:border 0.3s; }
 .auth-input:focus { border-color:var(--accent); }
 .auth-input::placeholder { color:var(--muted); }
-.btn-primary { background:var(--accent); color:var(--bg); border:none; padding:15px; border-radius:3px; font-family:'Tajawal',sans-serif; font-size:16px; font-weight:700; cursor:pointer; letter-spacing:0.05em; transition:all 0.3s; margin-top:4px; width:100%; }
+.btn-primary { background:var(--accent); color:var(--bg); border:none; padding:15px; border-radius:3px; font-family:'Tajawal',sans-serif; font-size:16px; font-weight:700; cursor:pointer; letter-spacing:0.05em; transition:all 0.3s; }
 .btn-primary:hover { background:var(--accent2); transform:translateY(-1px); box-shadow:0 8px 32px rgba(0,229,200,0.3); }
 .btn-primary:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
 .auth-divider { display:flex; align-items:center; gap:12px; color:var(--muted); font-size:12px; margin:12px 0; }
 .auth-divider::before,.auth-divider::after { content:''; flex:1; height:1px; background:var(--border); }
-.btn-google { background:transparent; border:1px solid var(--border); color:var(--text); padding:13px; border-radius:3px; font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:all 0.3s; width:100%; }
+.btn-google { background:transparent; border:1px solid var(--border); color:var(--text); padding:13px; border-radius:3px; font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.3s; width:100%; }
 .btn-google:hover { border-color:var(--accent); background:rgba(0,229,200,0.05); }
-.google-icon { width:20px; height:20px; flex-shrink:0; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234285F4' d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'/%3E%3Cpath fill='%2334A853' d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'/%3E%3Cpath fill='%23FBBC05' d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'/%3E%3Cpath fill='%23EA4335' d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'/%3E%3C/svg%3E") center/contain no-repeat; }
+.google-icon { width:20px; height:20px; flex-shrink:0; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%234285F4' d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z'/%3E%3Cpath fill='%2334A853' d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z'/%3E%3Cpath fill='%23FBBC05' d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z'/%3E%3Cpath fill='%23EA4335' d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z'/%3E%3Cpath fill='none' d='M1 1h22v22H1z'/%3E%3C/svg%3E") no-repeat center; background-size:contain; }
 .auth-error { color:#ff6b6b; font-size:13px; margin-top:4px; display:none; }
 
 /* APP */
 #app { display:none; }
-nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 60px; height:64px; display:flex; align-items:center; justify-content:space-between; background:rgba(5,10,14,0.92); backdrop-filter:blur(20px); border-bottom:1px solid rgba(0,229,200,0.08); }
+nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 60px; height:64px; display:flex; align-items:center; justify-content:space-between; background:rgba(5,10,14,0.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--border); }
 .nav-logo { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:0.2em; color:var(--accent); }
 .nav-links { display:flex; gap:36px; list-style:none; }
 .nav-links a { color:var(--muted); text-decoration:none; font-size:12px; letter-spacing:0.15em; text-transform:uppercase; transition:color 0.3s; cursor:pointer; }
 .nav-links a:hover { color:var(--accent); }
 .nav-right { display:flex; align-items:center; gap:14px; }
-.btn-upload-nav { background:var(--accent); color:var(--bg); border:none; padding:9px 20px; font-family:'Tajawal',sans-serif; font-size:13px; font-weight:700; cursor:pointer; border-radius:2px; transition:all 0.3s; }
+.btn-upload-nav { background:var(--accent); color:var(--bg); border:none; padding:9px 20px; font-family:'Tajawal',sans-serif; font-size:13px; font-weight:700; cursor:pointer; border-radius:2px; transition:background 0.3s; }
 .btn-upload-nav:hover { background:var(--accent2); }
 .user-menu { position:relative; }
 .user-avatar { width:36px; height:36px; border-radius:50%; background:var(--accent); color:var(--bg); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; cursor:pointer; overflow:hidden; }
@@ -116,15 +130,15 @@ nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 60px; heigh
 .user-dropdown a:hover { background:rgba(0,229,200,0.08); color:var(--accent); }
 
 /* HERO */
-.hero { height:100vh; position:relative; display:flex; align-items:center; overflow:hidden; }
-.hero-bg { position:absolute; inset:0; background: linear-gradient(135deg, rgba(0,10,20,0.93) 0%, rgba(0,30,50,0.5) 50%, rgba(0,10,20,0.87) 100%), url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=80') center/cover no-repeat; }
+.hero { height:100vh; position:relative; display:flex; align-items:center; overflow:hidden; margin-top:64px; }
+.hero-bg { position:absolute; inset:0; background: linear-gradient(135deg, rgba(0,10,20,0.93) 0%, rgba(0,30,50,0.5) 50%, rgba(0,10,20,0.87) 100%); }
 .hero-content { position:relative; padding:0 80px; max-width:700px; animation:fadeUp 1s ease 0.3s both; }
 .hero-eyebrow { font-size:11px; letter-spacing:0.3em; text-transform:uppercase; color:var(--accent); margin-bottom:20px; }
 .hero-title { font-family:'Playfair Display',serif; font-size:clamp(48px,7vw,96px); font-weight:900; line-height:0.95; color:#fff; margin-bottom:28px; }
 .hero-title span { color:var(--accent); }
 .hero-desc { font-size:15px; color:rgba(255,255,255,0.58); line-height:1.8; max-width:460px; margin-bottom:40px; }
 .hero-btns { display:flex; gap:14px; flex-wrap:wrap; }
-.btn-outline { background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.3); padding:14px 28px; font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer; border-radius:2px; transition:all 0.3s; }
+.btn-outline { background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.3); padding:14px 28px; font-family:'Tajawal',sans-serif; font-size:14px; cursor:pointer; border-radius:3px; transition:all 0.3s; }
 .btn-outline:hover { border-color:var(--accent); color:var(--accent); }
 
 /* ALBUMS */
@@ -141,7 +155,7 @@ nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 60px; heigh
 .album-card:hover .album-info { transform:translateY(0); }
 .album-name { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.1em; color:#fff; margin-bottom:5px; }
 .album-count { font-size:11px; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; }
-.album-add-btn { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; border:2px dashed var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all 0.3s; font-family:'Tajawal',sans-serif; font-size:14px; }
+.album-add-btn { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; border:2px dashed var(--border); background:transparent; color:var(--muted); font-family:'Tajawal',sans-serif; font-size:13px; cursor:pointer; transition:all 0.3s; }
 .album-add-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(0,229,200,0.04); }
 .plus-icon { width:48px; height:48px; border:2px solid currentColor; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; transition:transform 0.3s; }
 .album-add-btn:hover .plus-icon { transform:rotate(90deg); }
@@ -149,12 +163,12 @@ nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 60px; heigh
 
 /* DISCOVER */
 .discover-section { position:relative; min-height:80vh; display:flex; align-items:center; overflow:hidden; padding:100px 80px; }
-.discover-bg { position:absolute; inset:0; background: linear-gradient(to right, rgba(5,10,14,0.97) 40%, rgba(5,10,14,0.4) 100%), url('https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1600&q=80') center/cover; }
+.discover-bg { position:absolute; inset:0; background: linear-gradient(to right, rgba(5,10,14,0.97) 40%, rgba(5,10,14,0.4) 100%); }
 .discover-content { position:relative; max-width:500px; }
 .discover-title { font-family:'Playfair Display',serif; font-size:clamp(40px,6vw,78px); font-weight:900; line-height:1; margin-bottom:26px; }
 .discover-title em { color:var(--accent); font-style:normal; }
 .discover-desc { color:rgba(255,255,255,0.5); font-size:15px; line-height:1.9; margin-bottom:38px; font-style:italic; border-right:2px solid var(--accent); padding-right:16px; }
-.play-btn { display:inline-flex; align-items:center; gap:14px; background:transparent; border:none; color:var(--text); cursor:pointer; font-family:'Tajawal',sans-serif; font-size:13px; letter-spacing:0.1em; text-transform:uppercase; transition:color 0.3s; }
+.play-btn { display:inline-flex; align-items:center; gap:14px; background:transparent; border:none; color:var(--text); cursor:pointer; font-family:'Tajawal',sans-serif; font-size:13px; letter-spacing:0.05em; transition:color 0.3s; }
 .play-btn:hover { color:var(--accent); }
 .play-circle { width:52px; height:52px; border:1px solid var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; transition:background 0.3s; }
 .play-btn:hover .play-circle { background:rgba(0,229,200,0.1); }
@@ -169,7 +183,7 @@ nav { position:fixed; top:0; left:0; right:0; z-index:100; padding:0 60px; heigh
 footer { border-top:1px solid var(--border); padding:44px 60px; display:flex; align-items:center; justify-content:space-between; background:var(--bg2); }
 .footer-logo { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.2em; color:var(--accent); }
 .footer-social { display:flex; gap:16px; }
-.social-link { width:34px; height:34px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--muted); text-decoration:none; font-size:12px; transition:all 0.3s; border-radius:50%; }
+.social-link { width:34px; height:34px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--muted); text-decoration:none; font-size:12px; transition:all 0.3s; }
 .social-link:hover { border-color:var(--accent); color:var(--accent); }
 .footer-copy { color:var(--muted); font-size:12px; }
 
@@ -187,7 +201,7 @@ footer { border-top:1px solid var(--border); padding:44px 60px; display:flex; al
 .drop-icon { font-size:38px; margin-bottom:10px; }
 .drop-text { color:var(--muted); font-size:13px; line-height:1.7; }
 .drop-text strong { color:var(--accent); }
-.modal-input { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:3px; padding:12px 14px; color:var(--text); font-family:'Tajawal',sans-serif; font-size:14px; width:100%; outline:none; margin-bottom:12px; text-align:right; transition:border 0.3s; }
+.modal-input { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:3px; padding:12px 14px; color:var(--text); font-family:'Tajawal',sans-serif; font-size:14px; width:100%; margin-bottom:12px; outline:none; transition:border 0.3s; }
 .modal-input:focus { border-color:var(--accent); }
 .modal-input::placeholder { color:var(--muted); }
 .preview-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-bottom:16px; }
@@ -197,7 +211,7 @@ footer { border-top:1px solid var(--border); padding:44px 60px; display:flex; al
 .upload-progress-bar { height:100%; background:var(--accent); width:0%; transition:width 0.3s; border-radius:2px; }
 
 /* TOAST */
-.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--accent); color:var(--bg); padding:13px 26px; border-radius:3px; font-family:'Tajawal',sans-serif; font-weight:700; font-size:14px; z-index:9999; transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1); white-space:nowrap; }
+.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--accent); color:var(--bg); padding:13px 26px; border-radius:3px; font-family:'Tajawal',sans-serif; font-size:13px; transition:transform 0.3s; z-index:9999; }
 .toast.show { transform:translateX(-50%) translateY(0); }
 .toast.error { background:#ff6b6b; color:#fff; }
 
@@ -309,7 +323,7 @@ footer { border-top:1px solid var(--border); padding:44px 60px; display:flex; al
       </button>
     </div>
     <div style="position:absolute;inset:0;pointer-events:none">
-      <div class="disc-thumb"><img src="https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=400&q=70" alt=""></div>
+      <div class="disc-thumb"><img src="https://images.unsplash.com/photo-1494496522488-7a8e488e8606?w=400&q=70" alt=""></div>
       <div class="disc-thumb"><img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=70" alt=""></div>
       <div class="disc-thumb"><img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&q=70" alt=""></div>
       <div class="disc-thumb"><img src="https://images.unsplash.com/photo-1434725039720-aaad6dd32dfe?w=400&q=70" alt=""></div>
@@ -348,12 +362,17 @@ footer { border-top:1px solid var(--border); padding:44px 60px; display:flex; al
 
 <div class="toast" id="toast"></div>
 
-<script type="module">
+<script>
 // ---- Firebase imports already done above via window._fb ----
 // Wait for Firebase to init
 async function waitFB() {
   return new Promise(res => {
-    const t = setInterval(() => { if(window._fb){clearInterval(t);res();} },50);
+    const t = setInterval(() => { 
+      if(window._fb){
+        clearInterval(t);
+        res();
+      } 
+    }, 50);
   });
 }
 
@@ -384,11 +403,10 @@ window.loginEmail = async function() {
   btn.disabled=true; btn.textContent='جاري الدخول...';
   errEl.style.display='none';
   try {
-    const {auth} = window._fb;
-    const {signInWithEmailAndPassword} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const {auth, signInWithEmailAndPassword} = window._fb;
     await signInWithEmailAndPassword(auth, email, pass);
   } catch(e) {
-    const msgs = {'auth/user-not-found':'البريد غير موجود','auth/wrong-password':'كلمة المرور خاطئة','auth/invalid-credential':'البريد أو كلمة المرور خاطئة'};
+    const msgs = {'auth/user-not-found':'البريد غير موجود','auth/wrong-password':'كلمة المرور خاطئة','auth/invalid-credential':'البريد أو كلمة المرور غير صحيحة'};
     errEl.textContent = msgs[e.code] || 'خطأ: ' + e.message;
     errEl.style.display='block';
     btn.disabled=false; btn.textContent='دخول ←';
@@ -407,8 +425,7 @@ window.registerEmail = async function() {
   btn.disabled=true; btn.textContent='جاري الإنشاء...';
   errEl.style.display='none';
   try {
-    const {auth} = window._fb;
-    const {createUserWithEmailAndPassword, updateProfile} = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+    const {auth, createUserWithEmailAndPassword, updateProfile} = window._fb;
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     await updateProfile(cred.user, {displayName: name});
   } catch(e) {
@@ -460,6 +477,7 @@ window.loadAlbums = async function() {
     renderAlbums(snap.docs.map(d => ({id:d.id,...d.data()})));
   } catch(e) {
     grid.innerHTML = '<div class="albums-loading">تعذر تحميل الألبومات</div>';
+    console.error('Album loading error:', e);
   }
 };
 
@@ -559,7 +577,8 @@ window.doUpload = async function() {
     }, 400);
   } catch(e) {
     showToast('خطأ في الرفع: ' + e.message, true);
-    btn.disabled=false; btn.textContent='رفع الصور ←';
+    btn.disabled=false; btn.textContent='ر��ع الصور ←';
+    console.error('Upload error:', e);
   }
 };
 
@@ -572,5 +591,150 @@ window.showToast = function(msg, isError=false) {
   setTimeout(()=>t.classList.remove('show'),3200);
 };
 </script>
+
+<!-- 
+==============================================================
+📋 تعليمات الإصلاح: ما يجب أن تفعله الآن
+==============================================================
+
+اتبع هذه الخطوات لجعل المشروع يعمل:
+
+## الخطوة 1️⃣: إنشاء حساب Firebase
+1. اذهب إلى https://console.firebase.google.com/
+2. اضغط "إنشاء مشروع" أو "إضافة مشروع"
+3. اسم المشروع: "Photo Anwar" (أو أي اسم تريده)
+4. اختر البلد وشروط الخدمة
+5. اضغط "إنشاء المشروع" وانتظر 🔄
+
+## الخطوة 2️⃣: تفعيل خدمات Firebase
+بعد إنشاء المشروع:
+
+### تفعيل Authentication (المصادقة):
+1. في الجانب الأيسر: "Build" → "Authentication"
+2. اضغط "Get Started"
+3. اضغط "Google" في قائمة Sign-in Methods
+4. ✓ فعّل البريد الإلكتروني
+5. ✓ فعّل Google
+6. اضغط "Save"
+
+### تفعيل Firestore Database:
+1. في الجانب الأيسر: "Build" → "Firestore Database"
+2. اضغط "Create Database"
+3. ابدأ في وضع **Test Mode** (للاختبار فقط)
+4. اختر المنطقة الجغرافية الأقرب لك
+5. اضغط "Create"
+
+### تفعيل Storage:
+1. في الجانب الأيسر: "Build" → "Storage"
+2. اضغط "Get Started"
+3. اقبل جميع التحذيرات
+4. اختر **Test Mode**
+5. اختر المنطقة الجغرافية
+
+## الخطوة 3️⃣: الحصول على مفاتيح Firebase
+1. في الإعدادات (أيقونة الترس ⚙️) في أعلى الصفحة
+2. اختر "إعدادات المشروع" أو "Project Settings"
+3. اسحب لأسفل ستجد "تطبيق الويب"
+4. انسخ هذا الكود الذي يبدأ بـ const firebaseConfig:
+
+const firebaseConfig = {
+  apiKey: "XXXX",
+  authDomain: "XXXX",
+  projectId: "XXXX",
+  storageBucket: "XXXX",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+## الخطوة 4️⃣: أدخل المفاتيح في الملف
+استبدل المفاتيح الدمية في السطر 22-28 بمفاتيحك الحقيقية:
+
+❌ قبل:
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY_HERE",
+  ...
+};
+
+✅ بعد:
+const firebaseConfig = {
+  apiKey: "AIzaSyDXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+  authDomain: "your-project.firebaseapp.com",
+  ...
+};
+
+## الخطوة 5️⃣: ضبط Firestore Security Rules
+هذا مهم جداً للأمان! اتبع هذه الخطوات:
+
+1. في Firebase Console: "Firestore Database"
+2. اضغط على تاب "Rules"
+3. استبدل الكود بهذا:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /albums/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null;
+    }
+  }
+}
+
+4. اضغط "Publish"
+
+## الخطوة 6️⃣: ضبط Firebase Storage Security Rules
+1. في Firebase Console: "Storage"
+2. اضغط على تاب "Rules"
+3. استبدل الكود بهذا:
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /photos/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+
+4. اضغط "Publish"
+
+## الخطوة 7️⃣: أضف النطاق (Domain) لـ Google OAuth
+1. في Firebase: "Authentication" → "Settings"
+2. اسحب لأسفل ستجد "Authorized Domains"
+3. اضغط "+ إضافة نطاق"
+4. أضف نطاقك (مثل: github.io أو اسم النطاق الخاص بك)
+
+## الخطوة 8️⃣: اختبر المشروع
+1. فتح الملف في المتصفح
+2. يجب أن ترى شاشة تسجيل الدخول
+3. جرّب:
+   - ✓ إنشاء حساب جديد برقم بريد وكلمة مرور
+   - ✓ تسجيل الدخول بـ Google
+   - ✓ رفع صور
+   - ✓ عرض الألبومات
+
+==============================================================
+⚠️ تحذيرات أمان مهمة:
+==============================================================
+
+❌ لا تكشف مفاتيح Firebase على GitHub عام!
+✅ استخدم Environment Variables أو Firebase Emulator للتطوير
+
+بعد اختبار المشروع، غيّر Security Rules من Test Mode إلى:
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /albums/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null;
+    }
+  }
+}
+
+==============================================================
+
+هل تحتاج مساعدة في أي خطوة؟
+-->
+
 </body>
 </html>
